@@ -2,7 +2,7 @@ import WelcomeSection from "../components/sections/WelcomeSection";
 import StatsCards from "../components/sections/StatsCards";
 import LevelProgress from "../components/sections/LevelProgress";
 import RightPanel from "../components/layout/RightPanel";
-import Feed from "../components/sections/Feed";
+import Feed from "../components/sections/feed";
 
 function EmployeeDashboard() {
   return (
