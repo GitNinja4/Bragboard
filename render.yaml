@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: bragboard-api
+    env: python
+    plan: free
+    pythonVersion: 3.11
+    buildCommand: cd server && pip install -r requirements.txt
+    startCommand: cd server && python -m uvicorn src.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        scope: service
+      - key: SECRET_KEY
+        scope: service
+
+  - type: static_site
+    name: bragboard-client
+    buildCommand: cd client && npm install && npm run build
+    staticPublishPath: client/dist
+    routes:
+      - path: /*
+        destination: /index.html
