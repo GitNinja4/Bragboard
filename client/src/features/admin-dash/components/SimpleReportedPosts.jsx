@@ -1,0 +1,353 @@
+import React, { useState, useEffect } from 'react';
+import { fetchReportsWithDetails, updateReportStatus, deleteReport } from '../../../services/reportService';
+
+const SimpleReportedPosts = () => {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [resolving, setResolving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [notification, setNotification] = useState(null);
+
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      console.log('SimpleReportedPosts: Fetching reports with PENDING status...');
+      // Use the same endpoint as the full ReportedPosts page with PENDING status
+      const data = await fetchReportsWithDetails('PENDING', null, null);
+      console.log('SimpleReportedPosts: Fetched data:', data);
+      const postsData = Array.isArray(data) ? data.slice(0, 5) : [];
+      console.log('SimpleReportedPosts: Posts after slice:', postsData);
+      setPosts(postsData);
+    } catch (error) {
+      console.error('SimpleReportedPosts: Error fetching reports:', error);
+      setError('Failed to load reports');
+      setPosts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResolve = async (reportId) => {
+    if (!window.confirm('Are you sure you want to resolve this report?')) return;
+    try {
+      setResolving(true);
+      console.log('SimpleReportedPosts: Resolving report', reportId);
+      await updateReportStatus(reportId, 'RESOLVED');
+      setPosts(posts.filter(p => p.report_id !== reportId));
+      setSelectedPost(null);
+      showNotification('Report resolved successfully', 'success');
+    } catch (error) {
+      console.error('Error resolving report:', error);
+      showNotification('Failed to resolve report', 'error');
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  const handleDelete = async (reportId) => {
+    if (!window.confirm('Are you sure you want to delete this shoutout? This action cannot be undone.')) return;
+    try {
+      setDeleting(true);
+      console.log('SimpleReportedPosts: Deleting report', reportId);
+      await deleteReport(reportId);
+      setPosts(posts.filter(p => p.report_id !== reportId));
+      setSelectedPost(null);
+      showNotification('Shoutout deleted successfully', 'success');
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      showNotification('Failed to delete shoutout', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 rounded-2xl p-8 shadow-sm border-2 border-gray-100 dark:border-slate-800 transition-colors duration-300">
+        <div className="mb-8 pb-6 border-b-2 border-gray-100 dark:border-slate-700">
+          <h2 className="text-2xl font-black text-gray-950 dark:text-white mb-1 transition-colors"><span className="text-2xl">🚨</span> Reported Posts</h2>
+          <p className="text-sm text-gray-600 dark:text-slate-400 font-medium transition-colors">Posts requiring moderation</p>
+        </div>
+        <div className="h-[280px] flex items-center justify-center">
+          <div className="animate-pulse text-sm text-gray-400 dark:text-slate-500 transition-colors">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 rounded-2xl p-8 shadow-sm border-2 border-gray-100 dark:border-slate-800 transition-colors duration-300">
+        <div className="mb-8 pb-6 border-b-2 border-gray-100 dark:border-slate-700">
+          <h2 className="text-2xl font-black text-gray-950 dark:text-white mb-1 transition-colors"><span className="text-2xl">🚨</span> Reported Posts</h2>
+          <p className="text-sm text-gray-600 dark:text-slate-400 font-medium transition-colors">Posts requiring moderation</p>
+        </div>
+        <div className="h-[280px] flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-600 dark:text-red-400 mb-3 font-medium transition-colors">{error}</p>
+            <button 
+              onClick={fetchReports}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium shadow-md"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-900 dark:to-slate-800 rounded-2xl p-8 shadow-sm border-2 border-gray-100 dark:border-slate-800 hover:shadow-xl hover:border-gray-200 dark:hover:border-slate-700 transition-all duration-300">
+      {/* Section Heading - Consolidated */}
+      <div className="mb-8 pb-6 border-b-2 border-gray-100 dark:border-slate-700 transition-colors">
+        <h2 className="text-2xl font-black text-gray-950 dark:text-white mb-1 transition-colors"><span className="text-2xl">🚨</span> Reported Posts</h2>
+        <p className="text-sm text-gray-600 dark:text-slate-400 font-medium transition-colors">{posts.length} posts requiring moderation</p>
+      </div>
+
+      {/* Posts List */}
+      <div className="space-y-4">
+        {posts.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-600 dark:text-slate-400 transition-colors">No reported posts at this time</p>
+          </div>
+        ) : (
+          posts.map((post) => (
+            <div key={post.report_id} className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-gray-200 dark:border-slate-700 hover:border-red-300 dark:hover:border-red-900/50 transition-colors duration-300">
+              {/* Post header */}
+              <div className="flex items-start gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
+                  {post.sender_name?.charAt(0) || 'U'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-gray-900 dark:text-white truncate transition-colors">{post.sender_name || 'Unknown'}</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-500 whitespace-nowrap transition-colors">• {post.report_created_at || 'unknown'}</p>
+                  </div>
+                  <p className="text-sm text-gray-700 dark:text-slate-300 mt-1 transition-colors">{post.message || 'No content'}</p>
+                </div>
+              </div>
+
+              {/* Report info */}
+              <div className="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3 mb-3 flex flex-wrap items-center gap-3 transition-colors">
+                <div>
+                  <span className="text-xs text-gray-600 dark:text-slate-400 transition-colors">Reported by:</span>
+                  <span className="ml-2 text-sm font-medium text-gray-900 dark:text-white transition-colors">{post.reporter_name || 'Anonymous'}</span>
+                </div>
+                <div className="flex items-center gap-2 ml-auto">
+                  <span className="text-xs text-gray-600 dark:text-slate-400 transition-colors">Reason:</span>
+                  <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-semibold rounded transition-colors">
+                    {post.reason || 'Unknown'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleResolve(post.report_id)}
+                  disabled={resolving || deleting}
+                  className="px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 dark:disabled:bg-slate-700 text-white text-sm font-semibold rounded-lg transition flex items-center gap-2 shadow-sm"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  {resolving ? 'Resolving...' : 'Resolve'}
+                </button>
+                <button
+                  onClick={() => handleDelete(post.report_id)}
+                  disabled={resolving || deleting}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 dark:disabled:bg-slate-700 text-white text-sm font-semibold rounded-lg transition flex items-center gap-2 shadow-sm"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </button>
+                <button
+                  onClick={() => setSelectedPost(post)}
+                  className="ml-auto px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition flex items-center gap-2 shadow-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  View
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Detail Modal */}
+      {selectedPost && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 transition-colors">
+            {/* Modal Header */}
+            <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex items-center justify-between border-b border-white/10 shadow-lg z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold shadow-inner">
+                  {selectedPost.sender_name?.charAt(0) || 'U'}
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">{selectedPost.sender_name || 'Unknown'}</h2>
+                  <p className="text-indigo-100 text-sm opacity-80">Report ID: #{selectedPost.report_id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedPost(null)}
+                className="text-white hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              {/* Shoutout Content */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-slate-400 uppercase mb-2 transition-colors">Shoutout Message</h3>
+                <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-indigo-500 p-4 rounded transition-colors">
+                  <p className="text-gray-800 dark:text-slate-200 text-base leading-relaxed transition-colors">{selectedPost.message || 'No content'}</p>
+                </div>
+              </div>
+
+              {/* Report Details */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1 transition-colors">Reported By</h4>
+                  <p className="text-gray-900 dark:text-white font-medium transition-colors">{selectedPost.reporter_name || 'Anonymous'}</p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1 transition-colors">Report Reason</h4>
+                  <span className="inline-block px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-sm font-semibold rounded-full transition-colors">
+                    {selectedPost.reason || 'Unknown'}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1 transition-colors">Priority</h4>
+                  <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
+                    selectedPost.priority === 'CRITICAL' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' :
+                    selectedPost.priority === 'HIGH' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
+                    selectedPost.priority === 'MEDIUM' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+                    'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                  }`}>
+                    {selectedPost.priority || 'LOW'}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase mb-1 transition-colors">Status</h4>
+                  <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
+                    selectedPost.status === 'PENDING' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+                    selectedPost.status === 'RESOLVED' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                    'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                  }`}>
+                    {selectedPost.status || 'PENDING'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Description */}
+              {selectedPost.description && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-slate-400 uppercase mb-2 transition-colors">Report Description</h3>
+                  <p className="text-gray-700 dark:text-slate-300 bg-gray-50 dark:bg-slate-800 p-3 rounded transition-colors">{selectedPost.description}</p>
+                </div>
+              )}
+
+              {/* Shoutout Category */}
+              {selectedPost.category && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-slate-400 uppercase mb-2 transition-colors">Category</h3>
+                  <span className="inline-block px-4 py-2 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium rounded-lg transition-colors">
+                    {selectedPost.category}
+                  </span>
+                </div>
+              )}
+
+              {/* Recipients */}
+              {selectedPost.recipients && selectedPost.recipients.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-slate-400 uppercase mb-3 transition-colors">Recipients</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedPost.recipients.map((recipient) => (
+                      <span key={recipient.id} className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm font-medium rounded-full transition-colors">
+                        {recipient.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Timestamp Info */}
+              <div className="border-t dark:border-slate-800 pt-4 flex items-center justify-between text-xs text-gray-500 dark:text-slate-500 transition-colors">
+                <div>
+                  <span className="font-semibold">Shoutout:</span> {selectedPost.shoutout_created_at ? new Date(selectedPost.shoutout_created_at).toLocaleString() : 'N/A'}
+                </div>
+                <div>
+                  <span className="font-semibold">Reported:</span> {selectedPost.report_created_at ? new Date(selectedPost.report_created_at).toLocaleString() : 'N/A'}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-gray-50 dark:bg-slate-800 px-6 py-4 border-t dark:border-slate-700 flex items-center gap-3 justify-end transition-colors">
+              <button
+                onClick={() => setSelectedPost(null)}
+                className="px-4 py-2 text-gray-700 dark:text-slate-300 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 rounded-lg font-medium transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => handleResolve(selectedPost.report_id)}
+                disabled={resolving || deleting}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 dark:disabled:bg-slate-700 text-white rounded-lg font-medium transition flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                {resolving ? 'Resolving...' : 'Resolve'}
+              </button>
+              <button
+                onClick={() => handleDelete(selectedPost.report_id)}
+                disabled={resolving || deleting}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 dark:disabled:bg-slate-700 text-white rounded-lg font-medium transition flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Toast */}
+      {notification && (
+        <div className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white font-medium transition-all z-40 ${
+          notification.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        }`}>
+          {notification.message}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SimpleReportedPosts;

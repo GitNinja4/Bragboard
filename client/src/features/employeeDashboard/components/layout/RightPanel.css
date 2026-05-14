@@ -1,0 +1,28 @@
+/* ============================================
+   CREATE SHOUTOUT BUTTON - SIMPLE STYLE
+   ============================================ */
+
+/* Create Shoutout Card Button - Simple Style aligned with dashboard */
+.create-shoutout-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 200ms ease-out;
+}
+
+/* Hover state - simple shadow increase */
+.create-shoutout-btn:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Active/Pressed state */
+.create-shoutout-btn:active {
+  transform: translateY(0);
+  transition: all 100ms ease-out;
+}
+
+/* Focus state for accessibility */
+.create-shoutout-btn:focus {
+  outline: 2px solid rgba(102, 126, 234, 0.5);
+  outline-offset: 2px;
+}
